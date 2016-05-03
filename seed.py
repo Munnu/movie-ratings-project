@@ -42,14 +42,18 @@ def load_movies():
 
     for row in open("seed_data/u.item"):
         row = row.rstrip()
-        movie_id, title, released_at, imdb_url = row.split("|")
+        movies_data = row.split("|")
+        movie_id = movies_data[0]
+        title = movies_data[1]
+        released_at = movies_data[2]
+        imdb_url = movies_data[3]
 
         # this list holds the title and the date
         title = title.strip("(")[0]
 
         # convert released_at from string to datetime format
         if released_at:
-            released_at = datetime.datetime.stptime(released_at, '%d-%b-%Y')
+            released_at = datetime.datetime.strptime(released_at, '%d-%b-%Y')
         else:
             released_at = None
 
@@ -81,8 +85,7 @@ def load_ratings():
         # Assembling the field
         rating = Rating(user_id=user_id,
                         movie_id=movie_id,
-                        score=score,
-                        timestamp=timestamp)
+                        score=score)
 
         # Adding session
         db.session.add(rating)
