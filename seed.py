@@ -46,10 +46,11 @@ def load_movies():
         movie_id = movies_data[0]
         title = movies_data[1]
         released_at = movies_data[2]
-        imdb_url = movies_data[3]
+        imdb_url = movies_data[4]
+
 
         # this list holds the title and the date
-        title = title.strip("(")[0]
+        title = title[:-6].rstrip()
 
         # convert released_at from string to datetime format
         if released_at:
