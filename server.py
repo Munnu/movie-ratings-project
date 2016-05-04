@@ -24,7 +24,8 @@ app.jinja_env.undefined = StrictUndefined
 def index():
     """Homepage."""
 
-    return render_template("homepage.html")
+    return render_template("homepage.html",
+                            user_session_info=session)
 
 
 @app.route("/users")
@@ -32,7 +33,8 @@ def user_list():
     """Show list of users."""
 
     users = User.query.all()
-    return render_template("user_list.html", users=users)
+    return render_template("user_list.html", 
+                            users=users)
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
@@ -63,13 +65,25 @@ def login_page():
                                                         )).first()
         print "\n\n\nThis is USERNAME_AND_PASSWORD_CHECK", username_password_check
         if username_password_check is None:
-            print "ERROR!!!!"
+            # want to redirect them back the the page with login form
+            # flash a message
+            flash('Error in login')
+            return redirect(url_for('sign_up'))
         else:
+            session['user_id'] = username_password_check.user_id
+            print "^^^^^^^^^^^^^^^", session
             # valid login credentials redirects user to home page
             flash('You were successfully logged in')
             return redirect(url_for('index'))
             print "\n\n\n======================================"
 
+@app.route('/logout')
+def logout():
+
+    # remove the user_id from the session if it exists
+    flash('You were successfully logged out')
+    session.pop('user_id', None)
+    return redirect(url_for('sign_up'))
 
 @app.route("/sign-up")
 def sign_up():
