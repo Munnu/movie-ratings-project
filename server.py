@@ -36,6 +36,23 @@ def user_list():
     return render_template("user_list.html", 
                             users=users)
 
+@app.route("/users/<int:user_id>")
+def user_profile(user_id):
+    """User profile page"""
+
+    if 'user_id' in session:
+        user = User.query.filter_by(user_id=user_id).first()
+        
+        # Returns a list of rating objects (rating ids, user id, movie ids and scores)
+        ratings_on_user_id = Rating.query.filter_by(user_id=user_id).all()
+
+        return render_template("user-profile.html",
+                                age=user.age,
+                                zipcode=user.zipcode,
+                                ratings_on_user_id=ratings_on_user_id
+                                )
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
     email = request.form.get("email")
@@ -63,7 +80,7 @@ def login_page():
                                                         User.email==email, 
                                                         User.password==password
                                                         )).first()
-        print "\n\n\nThis is USERNAME_AND_PASSWORD_CHECK", username_password_check
+
         if username_password_check is None:
             # want to redirect them back the the page with login form
             # flash a message
@@ -71,11 +88,13 @@ def login_page():
             return redirect(url_for('sign_up'))
         else:
             session['user_id'] = username_password_check.user_id
-            print "^^^^^^^^^^^^^^^", session
+
             # valid login credentials redirects user to home page
             flash('You were successfully logged in')
-            return redirect(url_for('index'))
-            print "\n\n\n======================================"
+
+            # Redirects the user to their profile page upon login
+            return redirect(url_for('user_profile', user_id=session['user_id']))
+
 
 @app.route('/logout')
 def logout():
