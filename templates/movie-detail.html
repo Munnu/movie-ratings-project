@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
 
-    <h2>{{ ratings_by_movie[0].movie.title }}</h2>
+    <h2>{{ movie.title }}</h2>
 
 
     <p>Add or update a review for this</p>
-    <form action="/movielist/{{ratings_by_movie[0].movie_id}}" method="POST">
+    <form action="/movielist/p/{{movie.movie_id}}" method="POST">
 
       <input type='radio' name='rating' value='1'>1
       <input type='radio' name='rating' value='2'>2
@@ -15,17 +15,22 @@
       <input type="submit">
     </form>
 
+
     <p>Average rating: {{ average }}</p>
     {% if prediction %}
         <p>We predict you will rate this movie {{ prediction }}.</p>
     {% endif %}
 
-    <ul>
-      {% for rating in ratings_by_movie %}
-      <li>
-        {{ rating.score }}
-      </li>
-      {% endfor %}
-    </ul>
+    {% if user_rating %}
+      <ul>
+        <li>
+          Your rating: {{ user_rating.score }}
+        </li>
+      </ul>
+    {% endif %}
+
+    {% if beratement %}
+      <h2>{{ beratement }}</h2>
+    {% endif %}
 
 {% endblock %}

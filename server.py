@@ -62,68 +62,129 @@ def movie_list():
 
     return render_template('movie-list.html', movies=movies)
 
-@app.route("/movielist/<int:movie_id>", methods=['GET', 'POST'])
-def movie_detail(movie_id):
+  
+
+@app.route("/movielist/<int:movie_id>", methods=['GET'])
+def movie_detail_get(movie_id):
     """ 
         This displays the information about a single movie, has a list
         of all the ratings for the movie, and has a form for the user 
         to use for rating the movie.
     """
-    if request.method == 'POST':
-        # query to see if the user_id && movie_id exists in ratings
-        if 'user_id' in session:
-            rating = request.form.get("rating")
 
-            rating_on_movie_by_user = Rating.query.filter(and_(
-                                                                Rating.user_id==session['user_id'],
-                                                                Rating.movie_id==movie_id)).first()
-            if rating_on_movie_by_user:
-                # if/ else conditional here that says 
-                # if the list returns something, then we UPDATE
-                rating_on_movie_by_user.score = rating
-                db.session.commit()
-            else:
-                # we insert instead because it is a new record
-                new_rating = Rating(movie_id=movie_id, user_id=session['user_id'], score=rating)
-                db.session.add(new_rating)
-                db.session.commit()
+    BERATEMENT_MESSAGES = [
+        "I suppose you don't have such bad taste after all.",
+        "I regret every decision that I've ever made that has brought me" +
+            " to listen to your opinion.",
+        "Words fail me, as your taste in movies has clearly failed you.",
+        "That movie is great. For a clown to watch. Idiot.",
+        "Words cannot express the awfulness of your taste."
+    ] 
 
-        # list all ratings for GET as standard, do the same for POST
-        ratings_by_movie = Rating.query.filter_by(movie_id=movie_id).all()
+    movie = Movie.query.get(movie_id)
+    user_id = session.get("user_id")
+    if user_id:
+        user_rating = Rating.query.filter_by(
+            movie_id = movie_id, user_id = user_id).first()
+    else:
+        user_rating = None
 
-        return render_template('movie-detail.html', 
-                                ratings_by_movie = ratings_by_movie, 
-                                sum=0)
+    # Get average rating of movie
+    rating_scores = [r.score for r in movie.ratings]
+    avg_rating = float(sum(rating_scores)) / len(rating_scores)
 
-    elif request.method == 'GET':
-        movie = Movie.query.get(movie_id)
-        user_id = session.get("user_id")
-        if user_id:
-            user_rating = Rating.query.filter_by(
-                movie_id = movie_id, user_id = user_id).first()
+    prediction = None
+
+    # Prediction code: only predict if the user hasn't rated it.
+
+    if (not user_rating) and user_id:
+        user = User.query.get(user_id)
+        if user:
+            prediction = user.predict_rating(movie)
+
+    # Either use the prediction or their real rating
+
+    if prediction:
+        # User hasn't scored; use our prediction if we made one
+        effective_rating = prediction
+
+    elif user_rating:
+        # User has already scored for real; use that
+        effective_rating = user_rating.score
+
+    else:
+        # User hasn't scored, and we couldn't get a prediction
+        effective_rating = None
+
+    # Get the eye's rating, either by predicting or using real rating
+
+    the_eye = User.query.filter_by(email="the-eye@of-judgment.com").one()
+    eye_rating = Rating.query.filter_by(
+        user_id=the_eye.user_id, movie_id=movie.movie_id).first()
+
+    if eye_rating is None:
+        eye_rating = the_eye.predict_rating(movie)
+
+    else:
+        eye_rating = eye_rating.score
+
+    if eye_rating and effective_rating:
+        difference = abs(eye_rating - effective_rating)
+
+    else:
+        # We couldn't get an eye rating, so we'll skip difference
+        difference = None
+
+       # Depending on how different we are from the Eye, choose a message
+
+    if difference is not None:
+        beratement = BERATEMENT_MESSAGES[int(difference)]
+
+    else:
+        beratement = None
+
+    return render_template(
+            "movie-detail.html",
+            movie=movie,
+            user_rating=user_rating,
+            average=avg_rating,
+            prediction=prediction,
+            beratement=beratement
+            )
+
+
+@app.route("/movielist/p/<int:movie_id>", methods=['POST'])
+def movie_detail_post(movie_id):
+    """ 
+        This displays the information about a single movie, has a list
+        of all the ratings for the movie, and has a form for the user 
+        to use for rating the movie.
+    """
+
+    # query to see if the user_id && movie_id exists in ratings
+    if 'user_id' in session:
+        rating = request.form.get("rating")
+
+        rating_on_movie_by_user = Rating.query.filter(and_(
+                                                            Rating.user_id==session['user_id'],
+                                                            Rating.movie_id==movie_id)).first()
+        if rating_on_movie_by_user:
+            # if/ else conditional here that says 
+            # if the list returns something, then we UPDATE
+            rating_on_movie_by_user.score = rating
+            db.session.commit()
         else:
-            user_rating = None
+            # we insert instead because it is a new record
+            new_rating = Rating(movie_id=movie_id, user_id=session['user_id'], score=rating)
+            db.session.add(new_rating)
+            db.session.commit()
 
-        # Get average rating of movie
-        rating_scores = [r.score for r in movie.ratings]
-        avg_rating = float(sum(rating_scores)) / len(rating_scores)
+    # list all ratings for GET as standard, do the same for POST
+    ratings_by_movie = Rating.query.filter_by(movie_id=movie_id).all()
 
-        prediction = None
+    return render_template('movie-detail2.html', 
+                            ratings_by_movie = ratings_by_movie)
 
-        # Prediction code: only predict if the user hasn't rated it.
-
-        if (not user_rating) and user_id:
-            user = User.query.get(user_id)
-            if user:
-                prediction = user.predict_rating(movie)
-
-        return render_template(
-                "movie-detail.html",
-                movie=movie,
-                user_rating=user_rating,
-                average=avg_rating,
-                prediction=prediction
-                )
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():
