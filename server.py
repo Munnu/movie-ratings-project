@@ -87,11 +87,43 @@ def movie_detail(movie_id):
                 new_rating = Rating(movie_id=movie_id, user_id=session['user_id'], score=rating)
                 db.session.add(new_rating)
                 db.session.commit()
-        
-    # list all ratings for GET as standard, do the same for POST
-    ratings_by_movie = Rating.query.filter_by(movie_id=movie_id).all()
 
-    return render_template('movie-detail.html', ratings_by_movie = ratings_by_movie, sum=0)
+        # list all ratings for GET as standard, do the same for POST
+        ratings_by_movie = Rating.query.filter_by(movie_id=movie_id).all()
+
+        return render_template('movie-detail.html', 
+                                ratings_by_movie = ratings_by_movie, 
+                                sum=0)
+
+    elif request.method == 'GET':
+        movie = Movie.query.get(movie_id)
+        user_id = session.get("user_id")
+        if user_id:
+            user_rating = Rating.query.filter_by(
+                movie_id = movie_id, user_id = user_id).first()
+        else:
+            user_rating = None
+
+        # Get average rating of movie
+        rating_scores = [r.score for r in movie.ratings]
+        avg_rating = float(sum(rating_scores)) / len(rating_scores)
+
+        prediction = None
+
+        # Prediction code: only predict if the user hasn't rated it.
+
+        if (not user_rating) and user_id:
+            user = User.query.get(user_id)
+            if user:
+                prediction = user.predict_rating(movie)
+
+        return render_template(
+                "movie-detail.html",
+                movie=movie,
+                user_rating=user_rating,
+                average=avg_rating,
+                prediction=prediction
+                )
 
 @app.route("/login", methods=["GET", "POST"])
 def login_page():

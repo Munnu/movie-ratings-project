@@ -15,6 +15,10 @@
       <input type="submit">
     </form>
 
+    <p>Average rating: {{ average }}</p>
+    {% if prediction %}
+        <p>We predict you will rate this movie {{ prediction }}.</p>
+    {% endif %}
 
     <ul>
       {% for rating in ratings_by_movie %}
