@@ -64,7 +64,7 @@ def movie_list():
 
   
 
-@app.route("/movielist/<int:movie_id>", methods=['GET'])
+@app.route("/movielist/<int:movie_id>", methods=['GET', 'POST'])
 def movie_detail_get(movie_id):
     """ 
         This displays the information about a single movie, has a list
@@ -83,6 +83,7 @@ def movie_detail_get(movie_id):
 
     movie = Movie.query.get(movie_id)
     user_id = session.get("user_id")
+
     if user_id:
         user_rating = Rating.query.filter_by(
             movie_id = movie_id, user_id = user_id).first()
@@ -94,6 +95,22 @@ def movie_detail_get(movie_id):
     avg_rating = float(sum(rating_scores)) / len(rating_scores)
 
     prediction = None
+
+    if request.method == 'POST':
+        rating = request.form.get("rating") 
+        rating_on_movie_by_user = Rating.query.filter(and_(
+                                                            Rating.user_id==session['user_id'],
+                                                            Rating.movie_id==movie_id)).first()
+        if rating_on_movie_by_user:
+            # if/ else conditional here that says 
+            # if the list returns something, then we UPDATE
+            rating_on_movie_by_user.score = rating
+            db.session.commit()
+        else:
+            # we insert instead because it is a new record
+            new_rating = Rating(movie_id=movie_id, user_id=session['user_id'], score=rating)
+            db.session.add(new_rating)
+            db.session.commit()
 
     # Prediction code: only predict if the user hasn't rated it.
 
@@ -151,39 +168,6 @@ def movie_detail_get(movie_id):
             prediction=prediction,
             beratement=beratement
             )
-
-
-@app.route("/movielist/p/<int:movie_id>", methods=['POST'])
-def movie_detail_post(movie_id):
-    """ 
-        This displays the information about a single movie, has a list
-        of all the ratings for the movie, and has a form for the user 
-        to use for rating the movie.
-    """
-
-    # query to see if the user_id && movie_id exists in ratings
-    if 'user_id' in session:
-        rating = request.form.get("rating")
-
-        rating_on_movie_by_user = Rating.query.filter(and_(
-                                                            Rating.user_id==session['user_id'],
-                                                            Rating.movie_id==movie_id)).first()
-        if rating_on_movie_by_user:
-            # if/ else conditional here that says 
-            # if the list returns something, then we UPDATE
-            rating_on_movie_by_user.score = rating
-            db.session.commit()
-        else:
-            # we insert instead because it is a new record
-            new_rating = Rating(movie_id=movie_id, user_id=session['user_id'], score=rating)
-            db.session.add(new_rating)
-            db.session.commit()
-
-    # list all ratings for GET as standard, do the same for POST
-    ratings_by_movie = Rating.query.filter_by(movie_id=movie_id).all()
-
-    return render_template('movie-detail2.html', 
-                            ratings_by_movie = ratings_by_movie)
 
 
 @app.route("/login", methods=["GET", "POST"])
